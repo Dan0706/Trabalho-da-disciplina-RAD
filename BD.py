@@ -1,5 +1,6 @@
 import sqlite3
 
+from Alunos import criar_arquivo
 
 
 def conectar():
@@ -51,10 +52,12 @@ def inserir_pessoa(nome, idade, email):
 
 
 
-def consultar_pessoas():
+def consultar_pessoa_por_nome(nome):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pessoas')
+    cursor.execute('''
+        SELECT * FROM pessoas WHERE nome = ?
+    ''', (nome,))
     resultados = cursor.fetchall()
     conn.close()
     return resultados
@@ -74,12 +77,26 @@ def alterar_pessoa(id_pessoa, novo_nome, nova_idade, novo_email):
 
 
 
-def excluir_pessoa(id_pessoa):
+def verificar_id_existe(id_pessoa):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM pessoas WHERE id = ?', (id_pessoa,))
-    conn.commit()
+    cursor.execute('SELECT * FROM pessoas WHERE id = ?', (id_pessoa,))
+    resultado = cursor.fetchone()
     conn.close()
+    return resultado is not None
+
+
+def excluir_pessoa(id_pessoa):
+    if verificar_id_existe(id_pessoa):
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM pessoas WHERE id = ?', (id_pessoa,))
+        conn.commit()
+        conn.close()
+        print("Pessoa excluída com sucesso!")
+    else:
+        print(f"Pessoa com ID {id_pessoa} não encontrada no banco de dados.")
+
 
 
 
@@ -115,7 +132,7 @@ def menu():
     while True:
         print("\n--- Menu ---")
         print("1. Inserir nova pessoa")
-        print("2. Consultar pessoas")
+        print("2. Consultar pessoa pelo nome")
         print("3. Alterar pessoa")
         print("4. Excluir pessoa")
         print("5. Sair")
@@ -143,13 +160,18 @@ def menu():
             inserir_pessoa(nome, idade, email)
 
         elif escolha == '2':
-            pessoas = consultar_pessoas()
+            nome = input("Digite o nome da pessoa que deseja consultar: ")
+            while not validar_nome(nome):
+                print("Nome inválido. O nome não pode conter números ou caracteres especiais.")
+                nome = input("Digite o nome da pessoa que deseja consultar: ")
+
+            pessoas = consultar_pessoa_por_nome(nome)
             if pessoas:
-                print("\n--- Lista de Pessoas ---")
+                print("\n--- Pessoa(s) Encontrada(s) ---")
                 for pessoa in pessoas:
                     print(f"ID: {pessoa[0]}, Nome: {pessoa[1]}, Idade: {pessoa[2]}, Email: {pessoa[3]}")
             else:
-                print("Nenhuma pessoa encontrada.")
+                print("Nenhuma pessoa encontrada com esse nome.")
 
         elif escolha == '3':
             id_pessoa = input("ID da pessoa a ser alterada: ")
@@ -184,7 +206,6 @@ def menu():
             try:
                 id_pessoa = int(id_pessoa)
                 excluir_pessoa(id_pessoa)
-                print("Pessoa excluída com sucesso!")
             except ValueError:
                 print("ID inválido. Deve ser um número.")
 
@@ -194,6 +215,8 @@ def menu():
 
         else:
             print("Opção inválida. Tente novamente.")
+
+
 
 
 
